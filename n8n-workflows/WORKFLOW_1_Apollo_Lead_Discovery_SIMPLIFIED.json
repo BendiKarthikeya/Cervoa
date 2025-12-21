@@ -1,0 +1,99 @@
+{
+  "name": "1. Apollo Lead Discovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Daily 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apollo.io/v1/mixed_people/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{$env.APOLLO_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "page",
+              "value": "1"
+            },
+            {
+              "name": "per_page",
+              "value": "25"
+            }
+          ]
+        },
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n  \"page\": 1,\n  \"per_page\": 25,\n  \"person_titles\": [\"CEO\", \"CTO\", \"VP Engineering\", \"Founder\", \"Co-Founder\"],\n  \"organization_num_employees_ranges\": [\"11-50\", \"51-200\", \"201-500\"],\n  \"person_seniorities\": [\"senior\", \"c_level\", \"owner\"],\n  \"organization_locations\": [\"United States\"],\n  \"q_organization_keyword_tags\": [\"saas\", \"software\", \"b2b\"]\n}"
+      },
+      "name": "Apollo: Search Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Apollo leads and calculate scores\nconst people = $input.item.json.people || [];\nconst processedLeads = [];\n\nfor (const person of people) {\n  // Calculate lead score\n  let score = 50;\n  \n  if (person.title && person.title.toLowerCase().includes('ceo')) score += 40;\n  else if (person.title && person.title.toLowerCase().includes('cto')) score += 35;\n  else if (person.title && person.title.toLowerCase().includes('founder')) score += 30;\n  else if (person.title && person.title.toLowerCase().includes('vp')) score += 25;\n  \n  if (person.email) score += 10;\n  if (person.phone_numbers && person.phone_numbers.length > 0) score += 5;\n  \n  processedLeads.push({\n    json: {\n      Company: person.organization?.name || 'Unknown',\n      Contact: person.name || 'Unknown',\n      Email: person.email || '',\n      Phone: person.phone_numbers?.[0]?.sanitized_number || '',\n      Title: person.title || '',\n      Score: Math.min(score, 100),\n      Status: 'New',\n      Source: 'Apollo',\n      Value: 5000,\n      LinkedIn: person.linkedin_url || '',\n      Website: person.organization?.website_url || '',\n      Industry: person.organization?.industry || '',\n      'Employee Count': person.organization?.estimated_num_employees || 0\n    }\n  });\n}\n\nreturn processedLeads;"
+      },
+      "name": "Process & Score Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Leads",
+        "options": {}
+      },
+      "name": "Airtable: Save Leads",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Daily 9 AM": {
+      "main": [[{ "node": "Apollo: Search Leads", "type": "main", "index": 0 }]]
+    },
+    "Apollo: Search Leads": {
+      "main": [[{ "node": "Process & Score Leads", "type": "main", "index": 0 }]]
+    },
+    "Process & Score Leads": {
+      "main": [[{ "node": "Airtable: Save Leads", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

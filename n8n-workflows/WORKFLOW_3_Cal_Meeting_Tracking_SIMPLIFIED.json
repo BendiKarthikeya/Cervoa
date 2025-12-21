@@ -1,0 +1,69 @@
+{
+  "name": "3. Cal.com Meeting Tracking",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cal-com-booking",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: Cal.com",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "cal-com-cervoa"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Cal.com booking data\nconst payload = $input.item.json.payload || {};\nconst attendee = payload.attendees?.[0] || {};\n\n// Calculate duration\nconst start = new Date(payload.startTime);\nconst end = new Date(payload.endTime);\nconst duration = Math.round((end - start) / 60000); // minutes\n\nreturn {\n  json: {\n    Company: attendee.email ? attendee.email.split('@')[1] : 'Unknown',\n    'Contact Name': attendee.name || 'Unknown',\n    Email: attendee.email || '',\n    Date: payload.startTime,\n    Duration: duration,\n    'Meeting Type': payload.title || '30 Min Meeting',\n    Status: 'Scheduled',\n    Notes: `Cal.com booking ID: ${payload.uid || ''}`\n  }\n};"
+      },
+      "name": "Parse Booking Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Meetings",
+        "options": {}
+      },
+      "name": "Airtable: Save Meeting",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Meeting saved to Airtable\" } }}"
+      },
+      "name": "Respond to Cal.com",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Cal.com": {
+      "main": [[{ "node": "Parse Booking Data", "type": "main", "index": 0 }]]
+    },
+    "Parse Booking Data": {
+      "main": [[{ "node": "Airtable: Save Meeting", "type": "main", "index": 0 }]]
+    },
+    "Airtable: Save Meeting": {
+      "main": [[{ "node": "Respond to Cal.com", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

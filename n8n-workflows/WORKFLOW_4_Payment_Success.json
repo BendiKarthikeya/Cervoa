@@ -1,0 +1,68 @@
+{
+  "name": "4. Payment Success to Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-success",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: Payment Success",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.item.json || {}\nreturn { json: {\n  Company: payload.company || 'Unknown',\n  Amount: payload.amount || 0,\n  Currency: payload.currency || 'USD',\n  Date: payload.timestamp || new Date().toISOString(),\n  Type: payload.product || 'Payment',\n  Status: payload.status || 'Received',\n  Invoice: payload.paymentId || 'N/A',\n  PaymentMethod: payload.provider || 'Stripe/Gumroad'\n}}"
+      },
+      "name": "Normalize Payment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Revenue",
+        "options": {}
+      },
+      "name": "Airtable: Save Revenue",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Revenue recorded' } }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Payment Success": {
+      "main": [[{ "node": "Normalize Payment", "type": "main", "index": 0 }]]
+    },
+    "Normalize Payment": {
+      "main": [[{ "node": "Airtable: Save Revenue", "type": "main", "index": 0 }]]
+    },
+    "Airtable: Save Revenue": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

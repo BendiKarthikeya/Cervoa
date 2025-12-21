@@ -1,0 +1,77 @@
+{
+  "name": "5. Delivery Trigger to Lovable",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deliver",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: Delivery",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.lovable.dev/mock-delivery",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"customerEmail\": \"{{$json.customerEmail}}\",\n  \"orderId\": \"{{$json.orderId}}\",\n  \"package\": \"{{$json.package}}\"\n}"
+      },
+      "name": "Lovable: Trigger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Revenue",
+        "options": {}
+      },
+      "name": "Airtable: Log Delivery",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Delivery queued' } }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Delivery": {
+      "main": [[{ "node": "Lovable: Trigger", "type": "main", "index": 0 }]]
+    },
+    "Lovable: Trigger": {
+      "main": [[{ "node": "Airtable: Log Delivery", "type": "main", "index": 0 }]]
+    },
+    "Airtable: Log Delivery": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

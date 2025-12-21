@@ -1,0 +1,65 @@
+# API CREDENTIALS - PRIVATE
+# DO NOT COMMIT THIS FILE TO GIT!
+# Add this file to .gitignore
+
+# ==============================================
+# AIRTABLE
+# ==============================================
+# How to get: https://airtable.com/create/tokens
+# Scopes needed: data.records:read, data.records:write
+AIRTABLE_API_KEY=
+AIRTABLE_BASE_ID=
+
+# ==============================================
+# APOLLO.IO
+# ==============================================
+# How to get: Settings → Integrations → API
+APOLLO_API_KEY=
+
+# ==============================================
+# CLAY
+# ==============================================
+# How to get: Dashboard → Settings → API Keys
+CLAY_API_KEY=
+
+# ==============================================
+# BREVO (formerly Sendinblue)
+# ==============================================
+# How to get: SMTP & API → API Keys (v3 API key)
+BREVO_API_KEY=
+
+# ==============================================
+# STRIPE
+# ==============================================
+# How to get: Developers → API keys (Secret key, starts with sk_test_)
+STRIPE_API_KEY=
+
+# ==============================================
+# CALENDLY
+# ==============================================
+# How to get: Integrations → API & Webhooks → Personal Access Token
+CALENDLY_API_KEY=
+
+# ==============================================
+# GOOGLE WORKSPACE (Optional)
+# ==============================================
+# For Calendar and Drive integrations
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
+
+# ==============================================
+# N8N WEBHOOK URLs
+# ==============================================
+# These will be generated after you import workflows to n8n
+N8N_WEBHOOK_CALENDLY=
+N8N_WEBHOOK_STRIPE=
+N8N_WEBHOOK_MANUAL_TRIGGER=
+
+# ==============================================
+# NOTES
+# ==============================================
+# 1. Fill in each key as you create accounts
+# 2. Test each API key works before using in n8n
+# 3. Keep this file secure and private
+# 4. For production, use environment variables

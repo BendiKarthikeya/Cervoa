@@ -1,0 +1,22 @@
+# Node / build
+node_modules/
+dist/
+
+# Env files (do not commit secrets)
+.env
+.env.*
+backend/.env
+backend/.env.*
+
+# Private credentials store
+API_KEYS_PRIVATE.txt
+
+# Logs
+npm-debug.log*
+*.log
+# See .gitignore for all ignored files
+API_KEYS_PRIVATE.txt
+.env
+.env.local
+*.key
+credentials.json

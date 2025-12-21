@@ -1,0 +1,96 @@
+{
+  "name": "2. Brevo Email Nurturing",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Leads",
+        "returnAll": false,
+        "limit": 10,
+        "options": {
+          "filterByFormula": "AND({Status} = 'New', {Email} != '')"
+        }
+      },
+      "name": "Airtable: Watch for New Leads",
+      "type": "n8n-nodes-base.airtableTrigger",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{$env.BREVO_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {},
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"email\": \"{{$json.fields.Email}}\",\n  \"attributes\": {\n    \"FIRSTNAME\": \"{{$json.fields.Contact}}\",\n    \"LASTNAME\": \"\",\n    \"COMPANY\": \"{{$json.fields.Company}}\",\n    \"TITLE\": \"{{$json.fields.Title}}\"\n  },\n  \"listIds\": [2],\n  \"updateEnabled\": true\n}"
+      },
+      "name": "Brevo: Add to Contact List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Leads",
+        "id": "={{$json.id}}",
+        "options": {}
+      },
+      "name": "Airtable: Update Status",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      },
+      "parameters": {
+        "fields": {
+          "Status": "Contacted"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Airtable: Watch for New Leads": {
+      "main": [[{ "node": "Brevo: Add to Contact List", "type": "main", "index": 0 }]]
+    },
+    "Brevo: Add to Contact List": {
+      "main": [[{ "node": "Airtable: Update Status", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

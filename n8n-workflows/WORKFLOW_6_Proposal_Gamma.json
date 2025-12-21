@@ -1,0 +1,68 @@
+{
+  "name": "6. Proposal Generation (Gamma)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gamma-proposal",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: Proposal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.item.json || {};\nreturn { json: {\n  Company: payload.company || 'Unknown',\n  Title: payload.title || 'Proposal',\n  Value: payload.value || 0,\n  Status: 'Draft',\n  SentDate: new Date().toISOString(),\n  Notes: payload.notes || 'Gamma draft created',\n  ProposalUrl: payload.proposalUrl || 'https://gamma.app/mock-proposal'\n}}"
+      },
+      "name": "Prepare Proposal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Proposals",
+        "options": {}
+      },
+      "name": "Airtable: Save Proposal",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "1",
+          "name": "Airtable Personal Access Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Proposal saved' } }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Proposal": {
+      "main": [[{ "node": "Prepare Proposal", "type": "main", "index": 0 }]]
+    },
+    "Prepare Proposal": {
+      "main": [[{ "node": "Airtable: Save Proposal", "type": "main", "index": 0 }]]
+    },
+    "Airtable: Save Proposal": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
