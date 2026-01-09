@@ -1,0 +1,37 @@
+Dear Karthikeya,
+
+Following your discussion with Arppit, we are pleased to inform you that the feedback was very positive. We would like to move forward to the next stage of our selection process: a technical assignment designed to demonstrate your expertise and strategic approach.
+
+Given your background and your experience with n8n and multi-LLM integrations—specifically your work on end-to-end user flows and AI voice agents—we believe the following challenge aligns perfectly with your skills.
+
+The Challenge: End-to-End Agentic Sales Automation
+We are looking to build a complete lead generation, sales automation, and client delivery ecosystem to serve Cervoa’s internal operations and scale for clients. The task is to create an intelligent system using the following framework:
+
+- Lead Discovery & Enrichment: Apollo, Clay
+- Nurturing & Scheduling: Brevo, Calendly
+- Proposal Generation: Gamma (generating proposals from meeting notes)
+- Pipeline Tracking: Airtable
+- Transactions: Stripe, Gumroad
+- Delivery Automation: Lovable
+- Orchestration Layer: n8n/Zapier
+
+Key Objectives & Leadership Focus:
+Beyond the technical execution, we are looking for you to demonstrate leadership and high-level product thinking. Most importantly, we want to see:
+
+- Productization: Your thinking process on how to transform this workflow into a scalable, market-ready product.
+- Commercial Management: How you handle the commercial aspects, specifically maintaining budget efficiency while selecting tools.
+- Strategic Strategy: A plan for when to introduce AI Voice agents for outbound/inbound queries and an automated social media distribution strategy based on sales activity.
+
+We encourage you to optimize this model, recommend alternative tools, or suggest architectural improvements. Designing the demonstration with a client-facing UI in mind will be highly valued.
+
+Submission Requirements:
+As we are currently closing this round, please submit the following within the next 48 hours:
+
+1. System Architecture/Workflow Diagram and a ready-to-use UI interface.
+2. Tool Rationale and Preliminary Cost Estimates (demonstrating budget management).
+3. Core Logic & Problem-Solving: A breakdown of your strategic thinking and how you prioritize scalability and cost-efficiency.
+
+We look forward to seeing how you apply your expertise to this challenge.
+
+Best regards,
+Team Cervoa

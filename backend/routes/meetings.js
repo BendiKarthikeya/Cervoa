@@ -19,14 +19,15 @@ router.get('/', async (req, res) => {
 
     const meetings = records.map(record => ({
       id: record.id,
-      company: record.get('Company') || 'Unknown Company',
-      contactName: record.get('Contact Name') || 'Unknown Contact',
-      email: record.get('Email') || '',
-      date: record.get('Date') || new Date().toISOString(),
-      duration: record.get('Duration') || '30 min',
-      meetingType: record.get('Meeting Type') || 'Discovery',
-      status: record.get('Status') || 'Scheduled',
-      notes: record.get('Notes') || ''
+      company: record.get('Company Name'),
+      contactName: record.get('Attendees'),
+      email: record.get('Email'),
+      date: record.get('Start Time'),
+      duration: record.get('Duration'),
+      meetingType: record.get('Title'),
+      status: record.get('Status'),
+      notes: record.get('Description'),
+      videoUrl: record.get('Video Call URL')
     }));
 
     res.json({ meetings, count: meetings.length });
@@ -49,12 +50,12 @@ router.get('/upcoming', async (req, res) => {
 
     const meetings = records.map(record => ({
       id: record.id,
-      company: record.get('Company'),
-      contactName: record.get('Contact Name'),
+      company: record.get('Company Name'),
+      contactName: record.get('Attendees'),
       email: record.get('Email'),
-      date: record.get('Date'),
+      date: record.get('Start Time'),
       duration: record.get('Duration'),
-      meetingType: record.get('Meeting Type')
+      meetingType: record.get('Title')
     }));
 
     res.json({ meetings, count: meetings.length });

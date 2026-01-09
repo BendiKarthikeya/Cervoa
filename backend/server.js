@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 const dashboardRoutes = require('./routes/dashboard');
 const leadsRoutes = require('./routes/leads');
 const meetingsRoutes = require('./routes/meetings');
+const brevoRoutes = require('./routes/brevo');
 const webhooksRoutes = require('./routes/webhooks');
 const integrationsRoutes = require('./routes/integrations');
 
@@ -145,6 +146,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/meetings', meetingsRoutes);
+app.use('/api/brevo', brevoRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/integrations', integrationsRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

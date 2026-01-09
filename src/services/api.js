@@ -38,6 +38,9 @@ class ApiService {
       return (data.meetings || []).map(meeting => ({
         id: meeting.id,
         company: meeting.company,
+        contactName: meeting.contactName,
+        email: meeting.email,
+        date: meeting.date,
         time: new Date(meeting.date).toLocaleString('en-US', { 
           month: 'numeric', 
           day: 'numeric', 
@@ -47,7 +50,11 @@ class ApiService {
           hour12: true 
         }),
         duration: meeting.duration || '30 min',
-        link: meeting.link || 'zoom.us/j/123456789'
+        meetingType: meeting.meetingType,
+        status: meeting.status,
+        notes: meeting.notes,
+        videoUrl: meeting.videoUrl,
+        link: meeting.videoUrl || 'zoom.us/j/123456789'
       }));
     } catch (error) {
       console.error('Meetings API error:', error);
@@ -79,6 +86,18 @@ class ApiService {
       return await response.json();
     } catch (error) {
       console.error('Health check error:', error);
+      throw error;
+    }
+  }
+
+  async fetchBrevoStats() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/brevo/stats`);
+      if (!response.ok) throw new Error('Failed to fetch Brevo stats');
+      const data = await response.json();
+      return data.stats || {};
+    } catch (error) {
+      console.error('Brevo stats API error:', error);
       throw error;
     }
   }

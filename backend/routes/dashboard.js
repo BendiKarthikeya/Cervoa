@@ -6,15 +6,14 @@ const { tables } = require('../config/airtable');
 router.get('/', async (req, res) => {
   try {
     // Fetch all data in parallel
-    const [leads, meetings, proposals, revenue] = await Promise.all([
+    const [leads, meetings, proposals] = await Promise.all([
       fetchLeads(),
       fetchMeetings(),
-      fetchProposals(),
-      fetchRevenue()
+      fetchProposals()
     ]);
 
     // Calculate metrics
-    const metrics = calculateMetrics(leads, meetings, proposals, revenue);
+    const metrics = calculateMetrics(leads, meetings, proposals);
     
     // Get pipeline data
     const pipeline = calculatePipeline(leads);
@@ -45,15 +44,16 @@ async function fetchLeads() {
 
     return records.map(record => ({
       id: record.id,
-      company: record.get('Company') || 'Unknown Company',
-      contact: record.get('Contact') || 'Unknown Contact',
-      email: record.get('Email') || '',
-      title: record.get('Title') || '',
+      company: record.get('orgName') || 'Unknown Company',
+      contact: record.get('fullName') || 'Unknown Contact',
+      email: record.get('email') || '',
+      title: record.get('position') || '',
       score: record.get('Score') || Math.floor(Math.random() * 30) + 70,
       status: record.get('Status') || 'New',
       value: record.get('Value') || Math.floor(Math.random() * 40000) + 10000,
       source: record.get('Source') || 'Apollo',
-      lastActivity: '2 hours ago'
+      lastActivity: '2 hours ago',
+      mailSent: record.get('mail Send') || false
     }));
   } catch (error) {
     console.error('Error fetching leads:', error.message);
@@ -102,50 +102,31 @@ async function fetchProposals() {
   }
 }
 
-async function fetchRevenue() {
-  try {
-    const records = await tables.revenue.select({
-      maxRecords: 100
-    }).all();
-
-    return records.map(record => ({
-      id: record.id,
-      company: record.get('Company') || 'Unknown Company',
-      amount: record.get('Amount') || 0,
-      date: record.get('Date') || new Date().toISOString(),
-      status: record.get('Status') || 'Pending'
-    }));
-  } catch (error) {
-    console.error('Error fetching revenue:', error.message);
-    return [];
-  }
-}
-
-function calculateMetrics(leads, meetings, proposals, revenue) {
+function calculateMetrics(leads, meetings, proposals) {
   const totalLeads = leads.length;
   const qualifiedLeads = leads.filter(l => l.status === 'Qualified').length;
+  const emailsSent = leads.filter(l => l.mailSent === true).length;
   const totalMeetings = meetings.length;
   const scheduledMeetings = meetings.filter(m => m.status === 'Scheduled').length;
   const proposalsSent = proposals.length;
   const acceptedProposals = proposals.filter(p => p.status === 'Accepted').length;
-  const totalRevenue = revenue.reduce((sum, r) => sum + (r.amount || 0), 0);
   
   // Calculate growth (mock for now - would compare to previous period)
   const leadGrowth = 12.5;
   const meetingGrowth = 8.3;
-  const revenueGrowth = 23.4;
+  const emailGrowth = 15.2;
 
   return {
     totalLeads,
     qualifiedLeads,
     leadGrowth,
+    emailsSent,
+    emailGrowth,
     totalMeetings,
     scheduledMeetings,
     meetingGrowth,
     proposalsSent,
     acceptedProposals,
-    totalRevenue,
-    revenueGrowth,
     conversionRate: totalLeads > 0 ? ((qualifiedLeads / totalLeads) * 100).toFixed(1) : 0
   };
 }

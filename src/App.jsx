@@ -6,9 +6,10 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, Users, Target, DollarSign, Calendar, 
-  CheckCircle, AlertCircle, Zap, Settings, Menu, X
+  CheckCircle, AlertCircle, Zap, Settings, Menu, X, Plus, Mail
 } from 'lucide-react';
 import apiService from './services/api';
+import AddLeadsModal from './components/AddLeadsModal';
 
 export default function SalesAutomationDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -18,8 +19,10 @@ export default function SalesAutomationDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [leadsData, setLeadsData] = useState([]);
   const [meetingsData, setMeetingsData] = useState([]);
+  const [brevoStats, setBrevoStats] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [integrationLogs, setIntegrationLogs] = useState([]);
+  const [isAddLeadsModalOpen, setIsAddLeadsModalOpen] = useState(false);
 
   // Fetch data from backend
   useEffect(() => {
@@ -29,15 +32,17 @@ export default function SalesAutomationDashboard() {
         setError(null);
         
         // Fetch all data in parallel
-        const [dashboard, leads, meetings] = await Promise.all([
+        const [dashboard, leads, meetings, brevo] = await Promise.all([
           apiService.fetchDashboardData(),
           apiService.fetchLeads(),
-          apiService.fetchMeetings()
+          apiService.fetchMeetings(),
+          apiService.fetchBrevoStats()
         ]);
 
         setDashboardData(dashboard);
         setLeadsData(leads);
         setMeetingsData(meetings);
+        setBrevoStats(brevo);
         setLastUpdated(new Date());
         setLoading(false);
       } catch (err) {
@@ -53,6 +58,39 @@ export default function SalesAutomationDashboard() {
     const interval = setInterval(fetchData, 120000);
     return () => clearInterval(interval);
   }, []);
+
+  // Handle add leads form submission
+  const handleAddLeadsSubmit = async (formData) => {
+    try {
+      // Send the form data to n8n workflow
+      const n8nWebhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL;
+      
+      console.log('📤 Sending to webhook:', n8nWebhookUrl);
+      console.log('📊 Form data:', formData);
+      
+      const response = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      console.log('📬 Response status:', response.status);
+      const responseText = await response.text();
+      console.log('📋 Response body:', responseText);
+
+      if (response.ok) {
+        alert('✅ Leads search started! Check n8n for progress.');
+        setIsAddLeadsModalOpen(false);
+      } else {
+        alert(`❌ Error: HTTP ${response.status}\n\nWebhook might not exist or n8n server not responding.\n\nCheck console (F12) for details.`);
+      }
+    } catch (error) {
+      console.error('❌ Error submitting form:', error);
+      alert(`❌ Network Error:\n\n${error.message}\n\nCheck console (F12) for details.`);
+    }
+  };
 
   // Fallback data
   const fallbackLeads = [
@@ -113,9 +151,9 @@ export default function SalesAutomationDashboard() {
   ];
 
   const metrics = dashboardData?.metrics ? [
-    { label: 'Total Revenue', value: `$${((dashboardData.metrics.totalRevenue || 0) / 1000).toFixed(0)}K`, change: '+23%', icon: DollarSign, color: 'from-green-600 to-green-400' },
-    { label: 'Total Leads', value: String(dashboardData.metrics.totalLeads || 0), change: '+12%', icon: Users, color: 'from-purple-600 to-purple-400' },
-    { label: 'Meetings', value: String(dashboardData.metrics.totalMeetings || 0), change: '+8%', icon: Calendar, color: 'from-blue-600 to-blue-400' },
+    { label: 'Total Leads', value: String(dashboardData.metrics.totalLeads || 0), change: `+${dashboardData.metrics.leadGrowth || 0}%`, icon: Users, color: 'from-purple-600 to-purple-400' },
+    { label: 'Emails Sent', value: String(dashboardData.metrics.emailsSent || 0), change: `+${dashboardData.metrics.emailGrowth || 0}%`, icon: Mail, color: 'from-cyan-600 to-cyan-400' },
+    { label: 'Meetings', value: String(dashboardData.metrics.totalMeetings || 0), change: `+${dashboardData.metrics.meetingGrowth || 0}%`, icon: Calendar, color: 'from-blue-600 to-blue-400' },
     { label: 'Conversion Rate', value: `${dashboardData.metrics.conversionRate || 0}%`, change: '+0.8%', icon: TrendingUp, color: 'from-orange-600 to-orange-400' },
   ] : defaultMetrics;
 
@@ -172,8 +210,8 @@ export default function SalesAutomationDashboard() {
           {[
             { id: 'overview', label: 'Overview', icon: TrendingUp },
             { id: 'leads', label: 'Leads', icon: Users },
-            { id: 'deals', label: 'Active Deals', icon: Target },
             { id: 'calendar', label: 'Calendar', icon: Calendar },
+            { id: 'deals', label: 'Active Deals', icon: Target },
             { id: 'demo', label: 'Demo Flow', icon: Zap },
             { id: 'settings', label: 'Settings', icon: Settings }
           ].map(item => (
@@ -221,130 +259,125 @@ export default function SalesAutomationDashboard() {
           {/* Metrics Grid */}
           {activeTab === 'overview' && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                 {metrics.map((metric, idx) => (
                   <div
                     key={idx}
                     className="relative group cursor-pointer"
                   >
                     <div className={`absolute inset-0 bg-gradient-to-r ${metric.color} rounded-xl opacity-0 group-hover:opacity-10 transition-opacity duration-300 blur-lg`}></div>
-                    <div className="relative bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6 hover:border-blue-400/40 transition-all">
-                      <div className="flex items-start justify-between mb-4">
+                    <div className="relative bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-5 hover:border-blue-400/40 transition-all min-h-24">
+                      <div className="flex items-start justify-between mb-3">
                         <div className={`p-3 rounded-lg bg-gradient-to-br ${metric.color}`}>
                           <metric.icon className="text-white" size={24} />
                         </div>
-                        <span className="text-green-400 text-sm font-semibold">{metric.change}</span>
+                        <span className="text-green-400 text-xs font-semibold">{metric.change}</span>
                       </div>
-                      <p className="text-blue-300/70 text-sm mb-1">{metric.label}</p>
+                      <p className="text-blue-300/70 text-xs mb-1">{metric.label}</p>
                       <p className="text-3xl font-black text-white">{metric.value}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Revenue Chart */}
-                <div className="lg:col-span-2 bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-white mb-4">Monthly Revenue</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={revenueData}>
-                      <defs>
-                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#404060" />
-                      <XAxis dataKey="month" stroke="#94A3B8" />
-                      <YAxis stroke="#94A3B8" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #0EA5E9' }} />
-                      <Area type="monotone" dataKey="revenue" stroke="#0EA5E9" fill="url(#colorRevenue)" />
-                      <Area type="monotone" dataKey="target" stroke="#6366F1" strokeDasharray="5 5" fill="none" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Conversion Rates */}
-                <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-white mb-4">Conversion Rates</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={conversionRates}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#404060" />
-                      <XAxis dataKey="stage" angle={-45} textAnchor="end" height={80} stroke="#94A3B8" />
-                      <YAxis stroke="#94A3B8" />
-                      <Tooltip contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #0EA5E9' }} />
-                      <Bar dataKey="rate" fill="#0EA5E9" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Sales Funnel */}
-              <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-white mb-4">Sales Funnel</h3>
-                <div className="space-y-4">
-                  {funnelData.map((item, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-blue-300 font-semibold">{item.stage}</span>
-                        <span className="text-sm text-blue-300/70">{item.count} leads • ${((item.value ?? 0)).toLocaleString()}</span>
-                      </div>
-                      <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.round((item.count / baseFunnelCount) * 100)}%`,
-                            background: `linear-gradient(90deg, ${stageColors[item.stage]}, ${stageColors[item.stage]}dd)`
-                          }}
-                        ></div>
-                      </div>
+              {/* Brevo Email Section - Chart + Cards Layout */}
+              {brevoStats && (
+                <>
+                  {/* Row 1: Chart Full Width */}
+                  <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-6">📧 Email Funnel</h3>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Total Mails', value: parseInt(brevoStats.emailsSent) || 0, color: '#3B82F6' },
+                        { label: 'Delivered', value: parseInt(brevoStats.emailsDelivered) || 0, color: '#06B6D4' },
+                        { label: 'Opens', value: parseInt(brevoStats.opens) || 0, color: '#10B981' },
+                        { label: 'Bounces', value: parseInt(brevoStats.hardBounces) || 0, color: '#EF4444' }
+                      ].map((item, idx) => {
+                        const maxValue = parseInt(brevoStats.emailsSent) || 1;
+                        const widthPercent = (item.value / maxValue) * 100;
+                        return (
+                          <div key={idx} className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-slate-300 font-medium">{item.label}</p>
+                              <p className="text-xs text-slate-400 font-semibold">{item.value}</p>
+                            </div>
+                            <div className="w-full bg-slate-700/50 rounded-full h-6 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all flex items-center justify-end pr-2"
+                                style={{
+                                  backgroundColor: item.color,
+                                  width: `${widthPercent}%`,
+                                  minWidth: '30px'
+                                }}
+                              >
+                                {widthPercent > 15 && <span className="text-xs text-white font-bold">{Math.round(widthPercent)}%</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                  
+                  {/* Row 2: All 4 Cards in One Line */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-slate-800/80 backdrop-blur border border-cyan-400/20 rounded-xl p-5">
+                      <p className="text-cyan-300/70 text-xs mb-2">📨 Emails Sent</p>
+                      <p className="text-2xl font-bold text-cyan-300">{brevoStats.emailsSent || 0}</p>
+                    </div>
+                    <div className="bg-slate-800/80 backdrop-blur border border-green-400/20 rounded-xl p-5">
+                      <p className="text-green-300/70 text-xs mb-2">✅ Delivery Rate</p>
+                      <p className="text-2xl font-bold text-green-300">{brevoStats.deliveryRate}%</p>
+                    </div>
+                    <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-5">
+                      <p className="text-blue-300/70 text-xs mb-2">👁️ Open Rate</p>
+                      <p className="text-2xl font-bold text-blue-300">{brevoStats.openRate}%</p>
+                    </div>
+                    <div className="bg-slate-800/80 backdrop-blur border border-red-400/20 rounded-xl p-5">
+                      <p className="text-red-300/70 text-xs mb-2">❌ Hard Bounces</p>
+                      <p className="text-2xl font-bold text-red-300">{brevoStats.hardBounces || 0}</p>
+                    </div>
+                  </div>
+
+                </>
+              )}
             </>
           )}
 
           {/* Leads Tab */}
           {activeTab === 'leads' && (
             <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl overflow-hidden">
-              <div className="p-6 border-b border-blue-400/20">
+              <div className="p-6 border-b border-blue-400/20 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-white">All Leads</h3>
+                <button
+                  onClick={() => setIsAddLeadsModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all shadow-lg shadow-cyan-500/30"
+                >
+                  <Plus size={18} />
+                  Add Leads
+                </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-blue-400/10">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Company</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Contact</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Score</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Stage</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Value</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Activity</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-blue-300">Action</th>
+                    <tr className="border-b border-blue-400/10 bg-slate-700/30">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Company</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Contact</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Title</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Phone</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Industry</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayLeads.map((lead) => (
                       <tr key={lead.id} className="border-b border-blue-400/10 hover:bg-blue-500/10 transition-colors">
-                        <td className="px-6 py-4 text-white font-medium">{lead.company}</td>
-                        <td className="px-6 py-4 text-blue-300">{lead.contact}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreBadgeColor(lead.score)}`}>
-                            {lead.score}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStageBadgeColor(lead.stage)}`}>
-                            {lead.stage}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-white font-semibold">${lead.value.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-blue-300/70 text-sm">{lead.lastActivity}</td>
-                        <td className="px-6 py-4">
-                          <button className="text-cyan-400 hover:text-cyan-300 text-sm font-medium">→</button>
-                        </td>
+                        <td className="px-4 py-3 text-white font-medium text-sm">{lead.company || 'N/A'}</td>
+                        <td className="px-4 py-3 text-blue-300 text-sm">{lead.contact || 'N/A'}</td>
+                        <td className="px-4 py-3 text-blue-300 text-sm">{lead.title || 'N/A'}</td>
+                        <td className="px-4 py-3 text-blue-300 text-xs truncate max-w-xs">{lead.email || 'N/A'}</td>
+                        <td className="px-4 py-3 text-blue-300 text-sm">{lead.phone || 'N/A'}</td>
+                        <td className="px-4 py-3 text-blue-300 text-sm">{lead.industry || 'N/A'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -392,23 +425,70 @@ export default function SalesAutomationDashboard() {
 
           {/* Calendar Tab */}
           {activeTab === 'calendar' && (
-            <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-white mb-6">Upcoming Meetings</h3>
-              <div className="space-y-4">
-                {upcomingMeetings.map((meeting) => (
-                  <div key={meeting.id} className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <Calendar className="text-cyan-400" size={24} />
-                      <div>
-                        <p className="text-white font-semibold">{meeting.company}</p>
-                        <p className="text-blue-300/70 text-sm">{meeting.time} • {meeting.duration}</p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 bg-cyan-500/20 text-cyan-300 rounded-lg hover:bg-cyan-500/30 border border-cyan-400/30 text-sm font-medium">
-                      Join Meeting
-                    </button>
-                  </div>
-                ))}
+            <div className="bg-slate-800/80 backdrop-blur border border-blue-400/20 rounded-xl overflow-hidden">
+              <div className="p-6 border-b border-blue-400/20">
+                <h3 className="text-lg font-bold text-white">Meetings & Events</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-blue-400/10 bg-slate-700/30">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Company</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Attendees</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Start Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Title</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Description</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-blue-300">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {meetingsData && meetingsData.length > 0 ? (
+                      meetingsData.map((meeting) => (
+                        <tr key={meeting.id} className="border-b border-blue-400/10 hover:bg-blue-500/10 transition-colors">
+                          <td className="px-4 py-3 text-white font-medium text-sm">{meeting.company || 'N/A'}</td>
+                          <td className="px-4 py-3 text-blue-300 text-sm">{meeting.contactName || 'N/A'}</td>
+                          <td className="px-4 py-3 text-blue-300 text-xs truncate max-w-xs">{meeting.email || 'N/A'}</td>
+                          <td className="px-4 py-3 text-blue-300 text-sm">
+                            {meeting.date ? new Date(meeting.date).toLocaleDateString() + ' ' + new Date(meeting.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-blue-300 text-sm">{meeting.duration || '30 min'}</td>
+                          <td className="px-4 py-3 text-blue-300 text-sm">{meeting.meetingType || 'Meeting'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              meeting.status === 'Scheduled' ? 'bg-green-500/20 text-green-300' :
+                              meeting.status === 'Completed' ? 'bg-blue-500/20 text-blue-300' :
+                              'bg-yellow-500/20 text-yellow-300'
+                            }`}>
+                              {meeting.status || 'Scheduled'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-blue-300/70 text-xs truncate max-w-xs">{meeting.notes || '-'}</td>
+                                                  <td className="px-4 py-3">
+                                                    {meeting.videoUrl && (
+                                                      <a
+                                                        href={meeting.videoUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+                                                      >
+                                                        📞 Join
+                                                      </a>
+                                                    )}
+                                                  </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-8 text-center text-blue-300/50">
+                          No meetings scheduled
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -482,6 +562,13 @@ export default function SalesAutomationDashboard() {
           )}
         </div>
       </main>
+
+      {/* Add Leads Modal */}
+      <AddLeadsModal
+        isOpen={isAddLeadsModalOpen}
+        onClose={() => setIsAddLeadsModalOpen(false)}
+        onSubmit={handleAddLeadsSubmit}
+      />
     </div>
   );
 }
