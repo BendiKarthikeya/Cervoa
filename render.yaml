@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: cervoa-backend
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: AIRTABLE_API_KEY
+        sync: false
+      - key: AIRTABLE_BASE_ID
+        sync: false
+      - key: APOLLO_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: CAL_COM_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://cervoa-two.vercel.app
+    healthCheckPath: /health
